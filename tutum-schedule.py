@@ -52,7 +52,7 @@ def backup_volumes():
         for container_uri in service.containers:
             container_uuid = get_uuid(container_uri)
             container = tutum.Container.fetch(container_uuid)
-            if container.image_name == 'tutum.co/mhubig/dockup:latest':
+            if container.image_name == 'tutum.co/mhubig/scheduler:latest':
                 continue
             paths_to_backup = ''
             
