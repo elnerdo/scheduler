@@ -52,6 +52,7 @@ def backup_volumes():
         for container_uri in service.containers:
             container_uuid = get_uuid(container_uri)
             container = tutum.Container.fetch(container_uuid)
+            time.sleep(10)
             if container.image_name == 'tutum.co/mhubig/scheduler:latest':
                 continue
             paths_to_backup = ''
@@ -88,25 +89,26 @@ def backup_volumes():
             }
             ]
 
+            mybinding = [{"host_path": None,
+                         "container_path": None,
+                         "rewritable": True,
+                         "volumes_from": service.resource_uri}]
+
             dockup_service = tutum.Service.create(
                                 autodestroy="ALWAYS",
                                 image="tutum.co/mhubig/dockup:latest",
                                 name='dockup-' + service.name,
                                 target_num_containers=1,
                                 container_envvars=container_envvars,
-                                bindings=container.bindings
+                                bindings=mybinding
             )
 
             dockup_service.save()
-            dockup_service = tutum.Service.fetch(dockup_service.uuid)
-            time.sleep(10)
             dockup_service.start()
-            time.sleep(10)
             while dockup_service.state != 'Not running':
                 dockup_service = tutum.Service.fetch(dockup_service.uuid)
                 time.sleep(10)
             dockup_service.delete()
-            time.sleep(30)
     
 
 if __name__ == "__main__":
