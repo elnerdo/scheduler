@@ -98,6 +98,7 @@ def backup_volumes():
             )
 
             dockup_service.save()
+            dockup_service = tutum.Service.fetch(dockup_service.uuid)
             time.sleep(10)
             dockup_service.start()
             time.sleep(10)
