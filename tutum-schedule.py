@@ -55,6 +55,8 @@ def backup_volumes():
             time.sleep(10)
             if container.image_name == 'tutum.co/mhubig/scheduler:latest':
                 continue
+            if container.image_name == 'tutum/mysql:5.5':
+                dump_sql(service, container)
             paths_to_backup = ''
             
             for binding in container.bindings:
@@ -109,6 +111,48 @@ def backup_volumes():
                 dockup_service = tutum.Service.fetch(dockup_service.uuid)
                 time.sleep(10)
             dockup_service.delete()
+
+
+def dump_sql(service, container):
+
+    mybinding = [{"host_path": None,
+                  "container_path": None,
+                  "rewritable": True,
+                  "volumes_from": service.resource_uri}]
+
+    dump_service = tutum.Service.create(
+                        autodestroy="OFF",
+                        image="tutum/mysql:5.5",
+                        name='dump-' + container.name,
+                        target_num_containers=1,
+                        bindings=mybinding
+    )
+
+    dump_service.save()
+
+    dump_service = tutum.Service.fetch(dump_service.uuid)
+
+    linked_to_service = [{
+      "from_service": dump_service.resource_uri,
+      "name": service.name,
+      "to_service": service.resource_uri
+    }]
+
+    dump_service.linked_to_service = linked_to_service
+
+    dump_service.save()
+
+    cmd = 'sh -c "mysqldump -h$DB_1_ENV_TUTUM_CONTAINER_HOSTNAME -u$DB_1_ENV_MYSQL_USER -p$DB_1_ENV_MYSQL_PASS -P$DB_1_PORT_3306_TCP_PORT -t -n -B --all-databases > /etc/mysql/backup.sql"'
+
+    dump_service = tutum.Service.fetch(dump_service.uuid)
+    dump_service.run_command = cmd
+    dump_service.save()
+
+    dump_service.start()
+    while dump_service.state != 'Stopped':
+        dump_service = tutum.Service.fetch(dump_service.uuid)
+        time.sleep(10)
+    dump_service.delete()
     
 
 if __name__ == "__main__":
@@ -131,7 +175,7 @@ if __name__ == "__main__":
                                         autodestroy="ALWAYS")
     """
 
-    schedule.every(1).minutes.do(backup_volumes) # change timing
+    schedule.every.day.at("11:00")do(backup_volumes)
 
     while True:
         schedule.run_pending()
