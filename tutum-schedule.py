@@ -175,7 +175,7 @@ if __name__ == "__main__":
                                         autodestroy="ALWAYS")
     """
 
-    schedule.every.day.at("11:00")do(backup_volumes)
+    schedule.every.day.at("11:00").do(backup_volumes)
 
     while True:
         schedule.run_pending()
